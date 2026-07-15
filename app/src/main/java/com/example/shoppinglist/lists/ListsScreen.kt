@@ -27,6 +27,7 @@ import androidx.compose.material3.Icon
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Delete
+import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.mutableStateOf
@@ -44,6 +45,7 @@ fun ListsScreen(modifier: Modifier = Modifier, onListClick: (String) -> Unit = {
     val state by viewModel.uiState.collectAsState() // collectAsState is what lets us observe the state of the ViewModel
     var showDialog by remember { mutableStateOf(false) } // this is used to show the dialog
     var listToDelete by remember { mutableStateOf<ShoppingList?>(null) } // this is used to identify the list to delete
+    var listToRename by remember { mutableStateOf<ShoppingList?>(null)} // this is used to identify the list to rename
     // wrap everything in a Box so a FAB can float over it
     Box(modifier = modifier.fillMaxSize()) {
         // when the state changes, the composable will be recomposed
@@ -103,6 +105,10 @@ fun ListsScreen(modifier: Modifier = Modifier, onListClick: (String) -> Unit = {
                                     IconButton(onClick = { listToDelete = list }) {
                                         Icon(Icons.Default.Delete, contentDescription = "Delete list")
                                     }
+                                    Spacer(modifier = Modifier.weight(1f))
+                                    IconButton(onClick = {listToRename = list}) {
+                                        Icon(Icons.Default.Edit, contentDescription = "Rename list")
+                                    }
                                 }
                             }
                         }
@@ -155,6 +161,31 @@ fun ListsScreen(modifier: Modifier = Modifier, onListClick: (String) -> Unit = {
                 },
                 dismissButton = {
                     TextButton(onClick = { listToDelete = null }) { Text("Cancel") }
+                }
+            )
+        }
+        listToRename?.let { list ->
+            var name by remember(list) { mutableStateOf(list.name) } // name needs to be prefilled with the current list name
+            AlertDialog(
+                onDismissRequest = { listToRename = null },
+                title = { Text("Rename '${list.name}'?") },
+                text = {
+                    OutlinedTextField(
+                        value = name,
+                        onValueChange = { name = it },
+                        label = { Text("List Name") })
+                },
+                confirmButton = {
+                    TextButton(
+                        enabled = name.isNotBlank(),
+                        onClick = {
+                            viewModel.updateList(list.id, name.trim())
+                            listToRename = null
+                        },
+                    ) { Text("Rename") }
+                },
+                dismissButton = {
+                    TextButton(onClick = { listToRename = null }) { Text("Cancel") }
                 }
             )
         }

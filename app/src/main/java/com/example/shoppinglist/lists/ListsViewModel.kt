@@ -75,6 +75,23 @@ class ListsViewModel : ViewModel() {
         }
     }
 
+    // update list function to update the name of the list
+    fun updateList(id: String, name: String){
+        viewModelScope.launch {
+            // try catch block to get responses and handle errors
+            try {
+                val response = RetrofitClient.api.updateList(id, ListRequest(name))
+                // if successful response, load the lists
+                if (response.success) loadLists()
+                // if not successful, set the error state
+                else _uiState.value = ListsUiState.Error(response.error ?: "Failed to update list")
+            } catch (e: Exception){
+                // and if the if-else block fails, set the error state
+                _uiState.value = ListsUiState.Error(e.message ?: "Network error")
+            }
+        }
+    }
+
 
 
 }

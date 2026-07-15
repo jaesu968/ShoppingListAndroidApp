@@ -14,7 +14,7 @@ data class ApiResponse<T>(
 @Serializable
 data class ShoppingList(
     @SerialName("_id") val id: String,
-    val name: String,
+    var name: String,
     val createdAt: String? = null,
     val updatedAt: String? = null,
     val items: List<Item>? = null

@@ -74,6 +74,7 @@ class ListDetailViewModel(savedStateHandle: SavedStateHandle): ViewModel() {
                 }
             } catch (e: Exception) {
                 // item stays unchecked on failure
+                _uiState.value = DetailUiState.Error(e.message ?: "Network error")
             }
         }
     }
@@ -124,5 +125,34 @@ class ListDetailViewModel(savedStateHandle: SavedStateHandle): ViewModel() {
             }
         }
     }
+
+    // function to update item
+    fun updateItem(item: Item) {
+        viewModelScope.launch {
+            try {
+                val response = RetrofitClient.api.updateItem(
+                    listId, item.id, ItemRequest(
+                        name = item.name,
+                        qty = item.qty,
+                        checked = item.checked,
+                        notes = item.notes,
+                        brand = item.brand,
+                        category = item.category,
+                        price = item.price,
+                        weight = item.weight
+                    )
+                )
+                // if successful response, load items
+                if(response.success) loadItems()
+                else _uiState.value = DetailUiState.Error(
+                    response.error ?: response.message ?: "Failed to update item"
+                )
+            } catch (e: Exception) {
+                _uiState.value = DetailUiState.Error(e.message ?: "Network error")
+            }
+        }
+    }
 }
+
+
 
