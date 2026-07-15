@@ -27,18 +27,18 @@ import androidx.compose.ui.Alignment
 @Composable
 fun ListsScreen(modifier: Modifier = Modifier, onListClick: (String) -> Unit = {}, viewModel: ListsViewModel = viewModel()) {
     val state by viewModel.uiState.collectAsState() // collectAsState is what lets us observe the state of the ViewModel
-
+    // when the state changes, the composable will be recomposed
     when (val s = state) {
         is ListsUiState.Loading -> {
             // show loading indicator
-            Column(modifier = Modifier.fillMaxSize(), verticalArrangement = Arrangement.Center, horizontalAlignment = Alignment.CenterHorizontally){
+            Column(modifier = modifier.fillMaxSize(), verticalArrangement = Arrangement.Center, horizontalAlignment = Alignment.CenterHorizontally){
                 CircularProgressIndicator()
             }
         }
 
         is ListsUiState.Error -> {
             // show error message and a retry button that calls viewModel.loadLists()
-            Column(modifier = Modifier.fillMaxSize(), verticalArrangement = Arrangement.Center, horizontalAlignment = Alignment.CenterHorizontally) {
+            Column(modifier = modifier.fillMaxSize(), verticalArrangement = Arrangement.Center, horizontalAlignment = Alignment.CenterHorizontally) {
                 Text(text = s.message)
                 Button(onClick = { viewModel.loadLists() }) {
                     Text(text = "Retry")

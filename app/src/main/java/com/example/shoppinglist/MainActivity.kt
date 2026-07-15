@@ -25,6 +25,7 @@ import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
 import com.example.shoppinglist.ui.theme.ShoppingListTheme
 import com.example.shoppinglist.lists.ListsScreen
+import com.example.shoppinglist.lists.ListDetailScreen
 
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -74,12 +75,8 @@ fun ShoppingListApp() {
                         )
                     }
                     composable("detail/{listId}"){ backStackEntry ->
-                        val listId = backStackEntry.arguments?.getString("listId") ?: ""
-                        // Placeholder - proves nav works before building detail screen
-                        Text(
-                            text = "Detail for list: $listId",
-                            modifier = Modifier.padding(innerPadding)
-                        )
+                        // List Details Screen
+                        ListDetailScreen(modifier = Modifier.padding(innerPadding))
                     }
                 }
                 AppDestinations.FAVORITES -> Text("Favorites")
