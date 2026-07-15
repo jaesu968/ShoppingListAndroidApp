@@ -5,6 +5,7 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
@@ -35,16 +36,21 @@ import androidx.compose.material3.TextButton
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.material.icons.filled.Delete
+import androidx.compose.material3.IconButton
 import androidx.compose.ui.text.input.KeyboardType
+import com.example.shoppinglist.data.models.Item
 
 
 // List Detail Screen
 @Composable
-fun ListDetailScreen(modifier: Modifier = Modifier, onListClick: (String) -> Unit  = {}, viewModel: ListDetailViewModel = viewModel()) {
+fun ListDetailScreen(modifier: Modifier = Modifier, viewModel: ListDetailViewModel = viewModel()) {
     // state
     val state by viewModel.uiState.collectAsState() // collectAsState is what lets us observe the state of the ViewModel
     // variable used to show dialog, remember is used to keep the state of the variable across recompositions
     var showDialog by remember { mutableStateOf(false) }
+    // variable to help with deletion confirmation of items
+    var itemToDelete by remember { mutableStateOf<Item?>(null) }
     // wrap everything in a Box so a FAB can float over it
     Box(modifier = modifier.fillMaxSize()) {
         // when the state changes, the composable will recompose
@@ -91,7 +97,7 @@ fun ListDetailScreen(modifier: Modifier = Modifier, onListClick: (String) -> Uni
                         Card(modifier = Modifier.fillMaxWidth()) {
                             Row(
                                 modifier = Modifier.fillMaxWidth().padding(8.dp),
-                                verticalAlignment = Alignment.CenterVertically,
+                                verticalAlignment = Alignment.CenterVertically
                             ) {
                                 Checkbox(
                                     checked = item.checked,
@@ -101,6 +107,10 @@ fun ListDetailScreen(modifier: Modifier = Modifier, onListClick: (String) -> Uni
                                     text = if (item.qty > 1) "${item.name} x ${item.qty}" else item.name,
                                     style = MaterialTheme.typography.bodyLarge
                                 )
+                                Spacer(modifier = Modifier.weight(1f))
+                                IconButton(onClick = { itemToDelete = item }) {
+                                    Icon(Icons.Default.Delete, contentDescription = "Delete")
+                                }
                             }
                         }
                     }
@@ -146,6 +156,24 @@ fun ListDetailScreen(modifier: Modifier = Modifier, onListClick: (String) -> Uni
                 },
                 dismissButton = {
                     TextButton(onClick = { showDialog = false }) {Text("Cancel")}
+                }
+            )
+        }
+        // Deletion part of the card
+        itemToDelete?.let { item ->
+            AlertDialog(
+                onDismissRequest = { itemToDelete = null },
+                title = { Text("Delete '${item.name}'?") },
+                confirmButton = {
+                    TextButton(
+                        onClick = {
+                            viewModel.deleteItem(item)
+                            itemToDelete = null
+                        }
+                    ) { Text("Delete") }
+                },
+                dismissButton = {
+                    TextButton(onClick = { itemToDelete = null }) { Text("Cancel") }
                 }
             )
         }

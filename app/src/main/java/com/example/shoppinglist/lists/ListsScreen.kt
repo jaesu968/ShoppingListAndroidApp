@@ -17,6 +17,8 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.material3.Card
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.ui.unit.dp
@@ -24,6 +26,7 @@ import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.Icon
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.mutableStateOf
@@ -31,6 +34,8 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.IconButton
+import com.example.shoppinglist.data.models.ShoppingList
 
 
 // lists Screen that will show up on home screen
@@ -38,6 +43,7 @@ import androidx.compose.material3.AlertDialog
 fun ListsScreen(modifier: Modifier = Modifier, onListClick: (String) -> Unit = {}, viewModel: ListsViewModel = viewModel()) {
     val state by viewModel.uiState.collectAsState() // collectAsState is what lets us observe the state of the ViewModel
     var showDialog by remember { mutableStateOf(false) } // this is used to show the dialog
+    var listToDelete by remember { mutableStateOf<ShoppingList?>(null) } // this is used to identify the list to delete
     // wrap everything in a Box so a FAB can float over it
     Box(modifier = modifier.fillMaxSize()) {
         // when the state changes, the composable will be recomposed
@@ -83,20 +89,26 @@ fun ListsScreen(modifier: Modifier = Modifier, onListClick: (String) -> Unit = {
                         )
                     }
                     items(s.lists) { list ->
-                        Card(
-                            modifier = Modifier.fillMaxWidth(),
-                            // make it clickable and pass the list id to the onListClick function
-                            onClick = { onListClick(list.id) }) {
-                            Text(
-                                text = list.name,
-                                style = MaterialTheme.typography.titleLarge,
-                                modifier = Modifier.padding(16.dp)
-                            )
+                            Card(
+                                modifier = Modifier.fillMaxWidth(),
+                                // make it clickable and pass the list id to the onListClick function
+                                onClick = { onListClick(list.id) }) {
+                                Row(modifier = Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+                                    Text(
+                                        text = list.name,
+                                        style = MaterialTheme.typography.titleLarge,
+                                        modifier = Modifier.padding(16.dp)
+                                    )
+                                    Spacer(modifier = Modifier.weight(1f))
+                                    IconButton(onClick = { listToDelete = list }) {
+                                        Icon(Icons.Default.Delete, contentDescription = "Delete list")
+                                    }
+                                }
+                            }
                         }
                     }
                 }
             }
-        }
         // FAB that calls the showDialog variable
         FloatingActionButton(
             onClick = { showDialog = true },
@@ -125,6 +137,24 @@ fun ListsScreen(modifier: Modifier = Modifier, onListClick: (String) -> Unit = {
                 },
                 dismissButton = {
                     TextButton(onClick = { showDialog = false }) { Text("Cancel") }
+                }
+            )
+        }
+        // Deletion part of the card
+        listToDelete?.let { list ->
+            AlertDialog(
+                onDismissRequest = { listToDelete = null },
+                title = { Text("Delete '${list.name}'?") },
+                confirmButton = {
+                    TextButton(
+                        onClick = {
+                            viewModel.deleteList(list.id)
+                            listToDelete = null
+                        }
+                    ) { Text("Delete") }
+                },
+                dismissButton = {
+                    TextButton(onClick = { listToDelete = null }) { Text("Cancel") }
                 }
             )
         }

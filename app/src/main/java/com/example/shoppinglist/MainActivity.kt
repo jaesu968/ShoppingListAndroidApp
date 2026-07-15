@@ -39,7 +39,6 @@ class MainActivity : ComponentActivity() {
     }
 }
 
-@PreviewScreenSizes
 @Composable
 fun ShoppingListApp() {
     var currentDestination by rememberSaveable { mutableStateOf(AppDestinations.HOME) }
@@ -79,8 +78,6 @@ fun ShoppingListApp() {
                         ListDetailScreen(modifier = Modifier.padding(innerPadding))
                     }
                 }
-                AppDestinations.FAVORITES -> Text("Favorites")
-                AppDestinations.PROFILE -> Text("Profile")
             }
         }
     }
@@ -90,23 +87,6 @@ enum class AppDestinations(
     val label: String,
     val icon: Int,
 ) {
-    HOME("Home", R.drawable.ic_home),
-    FAVORITES("Favorites", R.drawable.ic_favorite),
-    PROFILE("Profile", R.drawable.ic_account_box),
+    HOME("Home", R.drawable.ic_home)
 }
 
-@Composable
-fun Greeting(name: String, modifier: Modifier = Modifier) {
-    Text(
-        text = "Hello $name!",
-        modifier = modifier
-    )
-}
-
-@Preview(showBackground = true)
-@Composable
-fun GreetingPreview() {
-    ShoppingListTheme {
-        Greeting("Kyle")
-    }
-}

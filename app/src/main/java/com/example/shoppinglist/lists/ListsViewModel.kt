@@ -15,6 +15,7 @@ class ListsViewModel : ViewModel() {
     // StateFlow for holding the UI state
     private val _uiState = MutableStateFlow<ListsUiState>(ListsUiState.Loading)
     val uiState: StateFlow<ListsUiState> = _uiState.asStateFlow()
+
     // init block to fetch the data
     init { loadLists() } // load the data upon startup of app
 
@@ -51,7 +52,24 @@ class ListsViewModel : ViewModel() {
                 // if not successful, set the error state
                 else _uiState.value = ListsUiState.Error(response.error ?: "Failed to create list")
             } catch (e: Exception){
-                // and if , the if-else block fails, set the error state
+                // and if the if-else block fails, set the error state
+                _uiState.value = ListsUiState.Error(e.message ?: "Network error")
+            }
+        }
+    }
+
+    // Delete lists function
+    fun deleteList(id: String){
+        viewModelScope.launch {
+            // try catch block to get responses and handle errors
+            try {
+                val response = RetrofitClient.api.deleteList(id)
+                // if successful response, load the lists
+                if (response.success) loadLists()
+                // if not successful, set the error state
+                else _uiState.value = ListsUiState.Error(response.error ?: "Failed to delete list")
+            } catch (e: Exception){
+                // and if the if-else block fails, set the error state
                 _uiState.value = ListsUiState.Error(e.message ?: "Network error")
             }
         }
