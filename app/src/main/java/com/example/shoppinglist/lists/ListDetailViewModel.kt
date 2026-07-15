@@ -11,6 +11,8 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
+import retrofit2.http.Path
+import kotlin.String
 
 
 // view model for list details
@@ -69,5 +71,22 @@ class ListDetailViewModel(savedStateHandle: SavedStateHandle): ViewModel() {
             }
         }
     }
+    // function to add items
+    fun addItem(name: String, qty: Int){
+        viewModelScope.launch {
+            // try catch block to get responses and handle errors
+            try {
+                val response = RetrofitClient.api.createItem(listId, ItemRequest(name = name, qty = qty))
+                // if successful response, load the item
+                if (response.success) loadItems()
+                // if not successful, set error state
+                else _uiState.value = DetailUiState.Error(response.error ?: response.message ?: "Failed to create item")
+            } catch (e: Exception){
+                // and if the if-else block fails, set error state
+                _uiState.value = DetailUiState.Error(e.message ?: "Network error")
+            }
+        }
+    }
+
 }
 

@@ -23,7 +23,7 @@ data class ShoppingList(
 @Serializable
 data class Item(
     @SerialName("_id") val id: String = "",
-    val listId : String,
+    val listId : String = "",
     val name: String,
     val qty: Int = 1,
     val checked: Boolean = false,

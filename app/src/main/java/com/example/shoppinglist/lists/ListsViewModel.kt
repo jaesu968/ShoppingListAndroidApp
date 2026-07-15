@@ -46,7 +46,7 @@ class ListsViewModel : ViewModel() {
             // try catch block to get responses and handle errors
             try {
                 val response = RetrofitClient.api.createList(ListRequest(name))
-                // it successful response, load the lists
+                // if successful response, load the lists
                 if (response.success) loadLists()
                 // if not successful, set the error state
                 else _uiState.value = ListsUiState.Error(response.error ?: "Failed to create list")
