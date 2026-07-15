@@ -67,7 +67,7 @@ fun ListDetailScreen(modifier: Modifier = Modifier, onListClick: (String) -> Uni
                         ){
                             Checkbox(
                                 checked = item.checked,
-                                onCheckedChange = {}
+                                onCheckedChange = { viewModel.toggleItem(item)}
                             )
                             Text(
                                 text = if (item.qty > 1) "${item.name} x ${item.qty}" else item.name,

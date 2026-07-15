@@ -3,6 +3,7 @@ package com.example.shoppinglist.lists
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.shoppinglist.data.api.RetrofitClient
+import com.example.shoppinglist.data.models.ListRequest
 import com.example.shoppinglist.ui.ListsUiState
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -35,6 +36,23 @@ class ListsViewModel : ViewModel() {
                 }
             } catch (e: Exception){
                 _uiState.value = ListsUiState.Error(e.message ?: "Network error") // set error state with message
+            }
+        }
+    }
+
+    // Create a List function '
+    fun createList(name: String){
+        viewModelScope.launch {
+            // try catch block to get responses and handle errors
+            try {
+                val response = RetrofitClient.api.createList(ListRequest(name))
+                // it successful response, load the lists
+                if (response.success) loadLists()
+                // if not successful, set the error state
+                else _uiState.value = ListsUiState.Error(response.error ?: "Failed to create list")
+            } catch (e: Exception){
+                // and if , the if-else block fails, set the error state
+                _uiState.value = ListsUiState.Error(e.message ?: "Network error")
             }
         }
     }

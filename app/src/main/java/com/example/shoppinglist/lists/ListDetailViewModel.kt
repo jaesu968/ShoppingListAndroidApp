@@ -4,6 +4,8 @@ import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.shoppinglist.data.api.RetrofitClient
+import com.example.shoppinglist.data.models.Item
+import com.example.shoppinglist.data.models.ItemRequest
 import com.example.shoppinglist.ui.DetailUiState
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -40,6 +42,30 @@ class ListDetailViewModel(savedStateHandle: SavedStateHandle): ViewModel() {
                 }
             } catch (e: Exception){
                 _uiState.value = DetailUiState.Error(e.message ?: "Network error")
+            }
+        }
+    }
+    // function to toggle the checkbox on items
+    fun toggleItem(item: Item){
+        viewModelScope.launch {
+            try {
+                val response = RetrofitClient.api.updateItem(
+                    listId, item.id, ItemRequest(checked = !item.checked)
+                )
+                // check for successful response
+                if (response.success && response.data != null){
+                    val current = _uiState.value
+                    if(current is DetailUiState.Success){
+                        _uiState.value = current.copy(
+                            // state must be replaced not mutated to preserve immutability
+                            items = current.items.map {
+                                if (it.id == item.id) response.data else it // update item in list
+                            }
+                        )
+                    }
+                }
+            } catch(e: Exception){
+                // item stays unchecked on failure
             }
         }
     }
