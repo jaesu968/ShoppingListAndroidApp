@@ -56,4 +56,4 @@ All responses are wrapped in `{ success, data, error, message }` (see `ApiRespon
 - [x] Navigation skeleton (list → detail route with `listId` argument)
 - [x] List detail screen (items, checkboxes)
 - [ ] Create / rename / delete lists (in progress)
-- [ ] Add / update / delete items
+- [ ] Add / update / delete items (in progress)
