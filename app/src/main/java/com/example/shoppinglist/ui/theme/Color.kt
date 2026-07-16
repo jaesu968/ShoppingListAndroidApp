@@ -25,3 +25,7 @@ val ActionGreenDark = Color(0xFF369870) // hover state for buttons
 val ActionBlue = Color(0xFF3B82F6) // cancel button
 val ActionRed = Color(0xFFEF4444) // delete button
 
+// color for dimmed zones
+val DarkTextMuted = Color(0xFF8A8A8A)
+val LightTextMuted = Color(0xFF6B6B6B)
+

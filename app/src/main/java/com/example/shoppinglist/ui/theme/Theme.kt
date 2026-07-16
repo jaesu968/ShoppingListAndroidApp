@@ -24,7 +24,8 @@ private val DarkColorScheme = darkColorScheme(
     secondary = ActionBlue,
     outlineVariant = DarkAccent,
     primaryContainer = ActionGreenDark,
-    onPrimaryContainer = Color.White
+    onPrimaryContainer = Color.White,
+    onSurfaceVariant = DarkTextMuted
 )
 
 private val LightColorScheme = lightColorScheme(
@@ -37,7 +38,8 @@ private val LightColorScheme = lightColorScheme(
     onPrimary = Color.White,
     onError = Color.White,
     secondary = ActionBlue,
-    outlineVariant = LightAccent
+    outlineVariant = LightAccent,
+    onSurfaceVariant = LightTextMuted
 
 
 

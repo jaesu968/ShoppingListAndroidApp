@@ -43,6 +43,7 @@ import androidx.compose.material3.Scaffold
 import androidx.compose.material3.TopAppBar
 import com.example.shoppinglist.data.models.Item
 import androidx.compose.material3.ButtonDefaults
+import androidx.compose.ui.text.style.TextDecoration
 
 
 // List Detail Screen
@@ -121,7 +122,12 @@ fun ListDetailScreen(modifier: Modifier = Modifier, viewModel: ListDetailViewMod
                                     )
                                     Text(
                                         text = if (item.qty > 1) "${item.name} x ${item.qty}" else item.name,
-                                        style = MaterialTheme.typography.bodyLarge
+                                        style = MaterialTheme.typography.bodyLarge,
+                                        // strike through the text if the item is checked
+                                        textDecoration = if (item.checked) TextDecoration.LineThrough else null,
+                                        // color the text based on the checked state
+                                        color = if (item.checked) MaterialTheme.colorScheme.onSurfaceVariant
+                                                else MaterialTheme.colorScheme.onSurface
                                     )
                                     Spacer(modifier = Modifier.weight(1f))
                                     IconButton(onClick = { itemToDelete = item }) {
