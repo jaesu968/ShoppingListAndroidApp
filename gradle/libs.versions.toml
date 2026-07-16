@@ -15,6 +15,7 @@ lifecycleViewmodelCompose = "2.11.0"
 navigationCompose = "2.9.8"
 foundationLayout = "1.11.4"
 material3 = "1.4.0"
+coroutinesTest ="1.10.2"
 
 [libraries]
 androidx-core-ktx = { group = "androidx.core", name = "core-ktx", version.ref = "coreKtx" }
@@ -42,6 +43,7 @@ androidx-navigation-compose = { group = "androidx.navigation", name = "navigatio
 androidx-compose-foundation-layout = { group = "androidx.compose.foundation", name = "foundation-layout", version.ref = "foundationLayout" }
 material-icons-core = { group = "androidx.compose.material", name = "material-icons-core", version = "1.7.8" }
 androidx-material3 = { group = "androidx.compose.material3", name = "material3", version.ref = "material3" }
+kotlinx-coroutines-test = { group = "org.jetbrains.kotlinx", name = "kotlinx-coroutines-test", version.ref = "coroutinesTest" }
 
 [plugins]
 android-application = { id = "com.android.application", version.ref = "agp" }

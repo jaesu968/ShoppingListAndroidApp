@@ -2,6 +2,7 @@ package com.example.shoppinglist.lists
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.example.shoppinglist.data.api.ApiService
 import com.example.shoppinglist.data.api.RetrofitClient
 import com.example.shoppinglist.data.models.ListRequest
 import com.example.shoppinglist.ui.ListsUiState
@@ -11,7 +12,7 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
 
 // ViewModel for holding state and do the fetching of data
-class ListsViewModel : ViewModel() {
+class ListsViewModel(private val api: ApiService = RetrofitClient.api) : ViewModel() {
     // StateFlow for holding the UI state
     private val _uiState = MutableStateFlow<ListsUiState>(ListsUiState.Loading)
     val uiState: StateFlow<ListsUiState> = _uiState.asStateFlow()
@@ -29,7 +30,7 @@ class ListsViewModel : ViewModel() {
             _uiState.value = ListsUiState.Loading // set loading state
             try {
                 // fetch lists from database
-                val response = RetrofitClient.api.getAllLists()
+                val response = api.getAllLists()
                 if (response.success && response.data != null) {
                     _uiState.value = ListsUiState.Success(response.data) // set success state with data
                 } else {
@@ -46,7 +47,7 @@ class ListsViewModel : ViewModel() {
         viewModelScope.launch {
             // try catch block to get responses and handle errors
             try {
-                val response = RetrofitClient.api.createList(ListRequest(name))
+                val response = api.createList(ListRequest(name))
                 // if successful response, load the lists
                 if (response.success) loadLists()
                 // if not successful, set the error state
@@ -63,7 +64,7 @@ class ListsViewModel : ViewModel() {
         viewModelScope.launch {
             // try catch block to get responses and handle errors
             try {
-                val response = RetrofitClient.api.deleteList(id)
+                val response = api.deleteList(id)
                 // if successful response, load the lists
                 if (response.success) loadLists()
                 // if not successful, set the error state
@@ -80,7 +81,7 @@ class ListsViewModel : ViewModel() {
         viewModelScope.launch {
             // try catch block to get responses and handle errors
             try {
-                val response = RetrofitClient.api.updateList(id, ListRequest(name))
+                val response = api.updateList(id, ListRequest(name))
                 // if successful response, load the lists
                 if (response.success) loadLists()
                 // if not successful, set the error state
@@ -91,7 +92,4 @@ class ListsViewModel : ViewModel() {
             }
         }
     }
-
-
-
 }

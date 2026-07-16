@@ -7,13 +7,16 @@ import com.example.shoppinglist.data.api.RetrofitClient
 import com.example.shoppinglist.data.models.Item
 import com.example.shoppinglist.data.models.ItemRequest
 import com.example.shoppinglist.ui.DetailUiState
+import com.example.shoppinglist.data.api.ApiService
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
 
 // view model for list details
-class ListDetailViewModel(savedStateHandle: SavedStateHandle): ViewModel() {
+class ListDetailViewModel(savedStateHandle: SavedStateHandle,
+    private val api: ApiService = RetrofitClient.api
+): ViewModel() {
     // get list id from saved state handle
     private val listId: String = checkNotNull(savedStateHandle["listId"])
 
@@ -34,7 +37,7 @@ class ListDetailViewModel(savedStateHandle: SavedStateHandle): ViewModel() {
             // try catch block to handle errors
             try {
                 // fetch lists from database
-                val response = RetrofitClient.api.getList(listId)
+                val response = api.getList(listId)
                 if (response.success && response.data != null) {
                     // check if response is successful and data is not null
                     val list = response.data // get list data
@@ -57,7 +60,7 @@ class ListDetailViewModel(savedStateHandle: SavedStateHandle): ViewModel() {
     fun toggleItem(item: Item) {
         viewModelScope.launch {
             try {
-                val response = RetrofitClient.api.updateItem(
+                val response = api.updateItem(
                     listId, item.id, ItemRequest(checked = !item.checked)
                 )
                 // check for successful response
@@ -85,7 +88,7 @@ class ListDetailViewModel(savedStateHandle: SavedStateHandle): ViewModel() {
             // try catch block to get responses and handle errors
             try {
                 val response =
-                    RetrofitClient.api.createItem(listId, request)
+                    api.createItem(listId, request)
                 // if successful response, load the item
                 if (response.success && response.data != null) loadItems()
                 // if not successful, set error state
@@ -103,7 +106,7 @@ class ListDetailViewModel(savedStateHandle: SavedStateHandle): ViewModel() {
     fun deleteItem(item: Item) {
         viewModelScope.launch {
             try {
-                val response = RetrofitClient.api.deleteItem(listId, item.id)
+                val response = api.deleteItem(listId, item.id)
                 // if successful response, remove item from list
                 if (response.success) {
                     val current = _uiState.value
@@ -130,7 +133,7 @@ class ListDetailViewModel(savedStateHandle: SavedStateHandle): ViewModel() {
     fun updateItem(itemId: String, request: ItemRequest) {
         viewModelScope.launch {
             try {
-                val response = RetrofitClient.api.updateItem(listId, itemId, request)
+                val response = api.updateItem(listId, itemId, request)
                 // if successful response, load items
                 if(response.success) loadItems()
                 else _uiState.value = DetailUiState.Error(
