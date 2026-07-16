@@ -15,3 +15,4 @@
 .cxx
 .artifacts/
  /.idea/claudeCodeEditorTabs.xml
+run-backend.sh

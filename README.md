@@ -85,7 +85,7 @@ class ListDetailViewModel(savedStateHandle: SavedStateHandle) : ViewModel() {
 }
 ```
 
-### 4. State is replaced, but never mutated
+### 4. State is replaced but never mutated
 
 Compose only recomposes when the `StateFlow` gets a *new* value. So updates
 build new lists instead of editing in place:
@@ -154,7 +154,31 @@ All responses are wrapped in `{ success, data, error, message }` (see `ApiRespon
 
 ## Running it
 
-1. **Start the backend** on your computer (it must be listening on port `8000`).
+### The backend
+
+The REST API is the **same server the Vue web app uses** — it lives in that project
+(`shopping-list/src/server1`) and is deliberately *not* duplicated here: one backend,
+two clients. For convenience this repo uses a small launcher script, `run-backend.sh`
+(gitignored, since it hardcodes a machine-specific path):
+
+```bash
+#!/bin/bash
+SERVER_DIR="$HOME/path/to/shopping-list/src/server1"   # adjust to your machine
+
+if ! nc -z 127.0.0.1 27017 2>/dev/null; then
+  echo "MongoDB isn't running — start it first (e.g. 'brew services start mongodb-community')"
+  exit 1
+fi
+
+exec npm --prefix "$SERVER_DIR" start
+```
+
+It checks MongoDB is up, then starts the server from its real home. Day-to-day
+workflow: `./run-backend.sh` in Android Studio's terminal tab, then Run the app.
+
+### The app
+
+1. **Start the backend** (see above — it must be listening on port `8000`).
 2. **Open the project in Android Studio** and let Gradle sync.
 3. **Run on an emulator.** The base URL in `RetrofitClient.kt` is `http://10.0.2.2:8000/api/` — `10.0.2.2` is how the emulator reaches your computer's `localhost`.
    - On a **physical phone**, change the base URL to your computer's LAN IP (both devices on the same Wi-Fi), e.g. `http://192.168.1.x:8000/api/`.
@@ -167,7 +191,7 @@ All responses are wrapped in `{ success, data, error, message }` (see `ApiRespon
 - [x] Navigation: list → detail with `listId` argument, TopAppBar with back arrow
 - [x] List detail screen: items, checkbox toggle
 - [x] Create / rename / delete lists (delete with confirmation)
-- [x] Add / edit / delete items via shared form dialog
+- [x] Add / edit / delete items via the shared form dialog
 
 **Full feature parity with the Vue web app.** Possible future work: snackbar-with-undo
 for deletes, pull-to-refresh, favorites, offline caching with Room.
