@@ -16,3 +16,4 @@
 .artifacts/
  /.idea/claudeCodeEditorTabs.xml
 run-backend.sh
+LOCAL_SETUP.txt

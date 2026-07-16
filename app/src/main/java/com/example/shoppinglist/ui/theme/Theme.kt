@@ -22,7 +22,9 @@ private val DarkColorScheme = darkColorScheme(
     onPrimary = Color.White,
     onError = Color.White,
     secondary = ActionBlue,
-    outlineVariant = DarkAccent
+    outlineVariant = DarkAccent,
+    primaryContainer = ActionGreenDark,
+    onPrimaryContainer = Color.White
 )
 
 private val LightColorScheme = lightColorScheme(

@@ -1,5 +1,6 @@
 package com.example.shoppinglist.lists
 
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.text.KeyboardOptions
@@ -17,6 +18,9 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.input.KeyboardType
+import androidx.compose.material3.ButtonDefaults
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.ui.unit.dp
 
 // Dialog for adding or editing an item
 @Composable
@@ -42,7 +46,8 @@ fun ItemFormDialog(
         title = { Text(title)},
         text = {
             Column(
-                modifier = Modifier.verticalScroll(rememberScrollState())) {
+                modifier = Modifier.verticalScroll(rememberScrollState()),
+                verticalArrangement = Arrangement.spacedBy(8.dp)) {
                 // existing name and qty fields, plus the five new ones
                 OutlinedTextField(label = { Text("Name") }, value = name, onValueChange = {name = it})
                 OutlinedTextField(label = { Text("Quantity") }, value = qtyText, onValueChange = {qtyText = it},
@@ -75,6 +80,10 @@ fun ItemFormDialog(
                 }
             ) { Text("Save") }
         },
-        dismissButton = { TextButton(onClick = onDismiss) { Text("Cancel") }}
+        dismissButton = { TextButton(onClick = onDismiss,
+            colors = ButtonDefaults.textButtonColors(
+                contentColor = MaterialTheme.colorScheme.secondary
+            )
+        ) { Text("Cancel") }}
     )
 }

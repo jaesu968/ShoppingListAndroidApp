@@ -1,5 +1,6 @@
 package com.example.shoppinglist.lists
 
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -41,6 +42,7 @@ import androidx.compose.material3.IconButton
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.TopAppBar
 import com.example.shoppinglist.data.models.Item
+import androidx.compose.material3.ButtonDefaults
 
 
 // List Detail Screen
@@ -104,16 +106,10 @@ fun ListDetailScreen(modifier: Modifier = Modifier, viewModel: ListDetailViewMod
                         verticalArrangement = Arrangement.spacedBy(16.dp),
                         contentPadding = PaddingValues(16.dp)
                     ) {
-                        item {
-                            Text(
-                                text = "Shopping List: ${s.listName}",
-                                style = MaterialTheme.typography.titleLarge,
-                                modifier = Modifier.fillMaxWidth().padding(bottom = 8.dp)
-                            )
-                        }
                         items(s.items) { item ->
                             Card(
                                 modifier = Modifier.fillMaxWidth(),
+                                border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant),
                                 onClick = { itemToEdit = item }) {
                                 Row(
                                     modifier = Modifier.fillMaxWidth().padding(8.dp),
@@ -129,7 +125,8 @@ fun ListDetailScreen(modifier: Modifier = Modifier, viewModel: ListDetailViewMod
                                     )
                                     Spacer(modifier = Modifier.weight(1f))
                                     IconButton(onClick = { itemToDelete = item }) {
-                                        Icon(Icons.Default.Delete, contentDescription = "Delete")
+                                        Icon(Icons.Default.Delete, contentDescription = "Delete",
+                                            tint = MaterialTheme.colorScheme.error)
                                     }
                                 }
                             }
@@ -140,6 +137,8 @@ fun ListDetailScreen(modifier: Modifier = Modifier, viewModel: ListDetailViewMod
             // FAB that calls the showDialog variable
             FloatingActionButton(
                 onClick = { showDialog = true },
+                containerColor = MaterialTheme.colorScheme.primaryContainer,
+                contentColor = MaterialTheme.colorScheme.onPrimaryContainer,
                 modifier = Modifier.align(Alignment.BottomEnd).padding(16.dp)
             )
             { Icon(Icons.Default.Add, contentDescription = "New Item") }
@@ -164,11 +163,18 @@ fun ListDetailScreen(modifier: Modifier = Modifier, viewModel: ListDetailViewMod
                             onClick = {
                                 viewModel.deleteItem(item)
                                 itemToDelete = null
-                            }
+                            },
+                            colors = ButtonDefaults.textButtonColors(
+                                contentColor = MaterialTheme.colorScheme.error
+                            )
                         ) { Text("Delete") }
                     },
                     dismissButton = {
-                        TextButton(onClick = { itemToDelete = null }) { Text("Cancel") }
+                        TextButton(onClick = { itemToDelete = null },
+                            colors = ButtonDefaults.textButtonColors(
+                                contentColor = MaterialTheme.colorScheme.secondary
+                            )
+                        ) { Text("Cancel") }
                     }
                 )
             }
@@ -176,7 +182,7 @@ fun ListDetailScreen(modifier: Modifier = Modifier, viewModel: ListDetailViewMod
                 ItemFormDialog(
                     title = "Edit '${item.name}'",
                     initial = item,
-                    onDismiss = { itemToEdit = null },
+                    onDismiss = { itemToEdit = null},
                     onSubmit = {
                         viewModel.updateItem(item.id, it)
                         itemToEdit = null

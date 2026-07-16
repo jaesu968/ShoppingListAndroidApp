@@ -8,12 +8,12 @@ import androidx.compose.ui.unit.sp
 
 // Set of Material typography styles to start with
 val Typography = Typography(
-    // App Title: Font-size: 2rem; font-weight: bold
-    headlineLarge = TextStyle(
-        fontFamily = FontFamily.Default,
-        fontWeight = FontWeight.Bold,
-        fontSize = 32.sp,
-        lineHeight = 40.sp
+    // "App Title"
+    titleLarge = TextStyle(
+      fontFamily = FontFamily.Default,
+      fontWeight = FontWeight.Bold,
+      fontSize = 22.sp,
+      lineHeight = 28.sp
     ),
     // List names: font-weight: bold, font-size: 1rem
     titleMedium = TextStyle(
@@ -37,21 +37,7 @@ val Typography = Typography(
         fontSize = 14.sp,
         lineHeight = 18.sp,
     ),
-    // theme toggling button
-    labelMedium = TextStyle(
-        fontFamily = FontFamily.Default,
-        fontWeight = FontWeight.Medium,
-        fontSize = 14.sp,
-        lineHeight = 18.sp,
-    ),
-    /* Other default text styles to override
-    titleLarge = TextStyle(
-        fontFamily = FontFamily.Default,
-        fontWeight = FontWeight.Normal,
-        fontSize = 22.sp,
-        lineHeight = 28.sp,
-        letterSpacing = 0.sp
-    ),
+    /*
     labelSmall = TextStyle(
         fontFamily = FontFamily.Default,
         fontWeight = FontWeight.Medium,

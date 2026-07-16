@@ -1,5 +1,6 @@
 package com.example.shoppinglist.lists
 
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material3.Button
@@ -38,11 +39,22 @@ import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.Scaffold
 import com.example.shoppinglist.data.models.ShoppingList
+import androidx.compose.material3.ButtonDefaults
+import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.TopAppBar
+import androidx.compose.material.icons.filled.DarkMode
+import androidx.compose.material.icons.filled.LightMode
 
 
 // lists Screen that will show up on home screen
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun ListsScreen(modifier: Modifier = Modifier, onListClick: (String) -> Unit = {}, viewModel: ListsViewModel = viewModel()) {
+fun ListsScreen(
+    modifier: Modifier = Modifier,
+    onListClick: (String) -> Unit = {},
+    darkTheme: Boolean = false,
+    onToggleTheme: () -> Unit = {},
+    viewModel: ListsViewModel = viewModel()) {
     val state by viewModel.uiState.collectAsState() // collectAsState is what lets us observe the state of the ViewModel
     var showDialog by remember { mutableStateOf(false) } // this is used to show the dialog
     var listToDelete by remember { mutableStateOf<ShoppingList?>(null) } // this is used to identify the list to delete
@@ -50,8 +62,24 @@ fun ListsScreen(modifier: Modifier = Modifier, onListClick: (String) -> Unit = {
     // Wrap everything again in Scaffold to add another FAB
     Scaffold(
         modifier = modifier,
+        topBar = {
+            TopAppBar(
+              title = { Text("My Shopping Lists")},
+              actions = {
+                  IconButton(onClick = onToggleTheme) {
+                      Icon(
+                          imageVector = if (darkTheme) Icons.Default.LightMode
+                          else Icons.Default.DarkMode,
+                          contentDescription = if (darkTheme) "Switch to Light Mode" else "Switch to Dark Mode"
+                      )
+                  }
+              }
+            )
+        },
         floatingActionButton = {
-            FloatingActionButton(onClick = { showDialog = true }) {
+            FloatingActionButton(onClick = { showDialog = true },
+                containerColor = MaterialTheme.colorScheme.primaryContainer,
+                contentColor = MaterialTheme.colorScheme.onPrimaryContainer,) {
                 Icon(Icons.Default.Add, contentDescription = "New List")
             }
         }
@@ -93,16 +121,10 @@ fun ListsScreen(modifier: Modifier = Modifier, onListClick: (String) -> Unit = {
                             .padding(16.dp),
                         verticalArrangement = Arrangement.spacedBy(8.dp)
                     ) {
-                        item {
-                            Text(
-                                text = "My Shopping Lists",
-                                style = MaterialTheme.typography.headlineMedium,
-                                modifier = Modifier.padding(bottom = 8.dp)
-                            )
-                        }
                         items(s.lists) { list ->
                             Card(
                                 modifier = Modifier.fillMaxWidth(),
+                                border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant),
                                 // make it clickable and pass the list id to the onListClick function
                                 onClick = { onListClick(list.id) }) {
                                 Row(
@@ -111,17 +133,17 @@ fun ListsScreen(modifier: Modifier = Modifier, onListClick: (String) -> Unit = {
                                 ) {
                                     Text(
                                         text = list.name,
-                                        style = MaterialTheme.typography.titleLarge,
+                                        style = MaterialTheme.typography.titleMedium,
                                         modifier = Modifier.padding(16.dp)
                                     )
                                     Spacer(modifier = Modifier.weight(1f))
                                     IconButton(onClick = { listToDelete = list }) {
                                         Icon(
                                             Icons.Default.Delete,
-                                            contentDescription = "Delete list"
+                                            contentDescription = "Delete list",
+                                            tint = MaterialTheme.colorScheme.error
                                         )
                                     }
-                                    Spacer(modifier = Modifier.weight(1f))
                                     IconButton(onClick = { listToRename = list }) {
                                         Icon(Icons.Default.Edit, contentDescription = "Rename list")
                                     }
@@ -153,7 +175,11 @@ fun ListsScreen(modifier: Modifier = Modifier, onListClick: (String) -> Unit = {
                         ) { Text("Create") }
                     },
                     dismissButton = {
-                        TextButton(onClick = { showDialog = false }) { Text("Cancel") }
+                        TextButton(onClick = { showDialog = false },
+                            colors = ButtonDefaults.textButtonColors(
+                                contentColor = MaterialTheme.colorScheme.secondary
+                            )
+                        ) { Text("Cancel") }
                     }
                 )
             }
@@ -167,11 +193,17 @@ fun ListsScreen(modifier: Modifier = Modifier, onListClick: (String) -> Unit = {
                             onClick = {
                                 viewModel.deleteList(list.id)
                                 listToDelete = null
-                            }
+                            },
+                            colors = ButtonDefaults.textButtonColors(
+                                contentColor = MaterialTheme.colorScheme.error
+                            )
                         ) { Text("Delete") }
                     },
                     dismissButton = {
-                        TextButton(onClick = { listToDelete = null }) { Text("Cancel") }
+                        TextButton(onClick = { listToDelete = null },
+                            colors = ButtonDefaults.textButtonColors(
+                                contentColor = MaterialTheme.colorScheme.secondary
+                            )) { Text("Cancel") }
                     }
                 )
             }
@@ -196,7 +228,11 @@ fun ListsScreen(modifier: Modifier = Modifier, onListClick: (String) -> Unit = {
                         ) { Text("Rename") }
                     },
                     dismissButton = {
-                        TextButton(onClick = { listToRename = null }) { Text("Cancel") }
+                        TextButton(onClick = { listToRename = null },
+                            colors = ButtonDefaults.textButtonColors(
+                                contentColor = MaterialTheme.colorScheme.secondary
+                            )
+                        ) { Text("Cancel") }
                     }
                 )
             }
