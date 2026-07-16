@@ -52,8 +52,8 @@ All responses are wrapped in `{ success, data, error, message }` (see `ApiRespon
 ## Status
 
 - [x] Data models, Retrofit API layer, networking setup
-- [x] Lists screen (fetch + display all shopping lists) with Loading / Error / Retry
+- [x] Lists screen (fetch and display all shopping lists) with Loading / Error / Retry
 - [x] Navigation skeleton (list → detail route with `listId` argument)
 - [x] List detail screen (items, checkboxes)
-- [ ] Create / rename / delete lists (in progress)
-- [ ] Add / update / delete items (in progress)
+- [x] Create / rename / delete lists (in progress)
+- [x] Add / update / delete items (in progress)

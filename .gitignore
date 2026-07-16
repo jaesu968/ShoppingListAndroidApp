@@ -13,4 +13,5 @@
 /captures
 .externalNativeBuild
 .cxx
-local.properties
+.artifacts/
+ /.idea/claudeCodeEditorTabs.xml

@@ -80,12 +80,12 @@ class ListDetailViewModel(savedStateHandle: SavedStateHandle): ViewModel() {
     }
 
     // function to add items
-    fun addItem(name: String, qty: Int) {
+    fun addItem(request: ItemRequest) {
         viewModelScope.launch {
             // try catch block to get responses and handle errors
             try {
                 val response =
-                    RetrofitClient.api.createItem(listId, ItemRequest(name = name, qty = qty))
+                    RetrofitClient.api.createItem(listId, request)
                 // if successful response, load the item
                 if (response.success && response.data != null) loadItems()
                 // if not successful, set error state
@@ -127,21 +127,10 @@ class ListDetailViewModel(savedStateHandle: SavedStateHandle): ViewModel() {
     }
 
     // function to update item
-    fun updateItem(item: Item) {
+    fun updateItem(itemId: String, request: ItemRequest) {
         viewModelScope.launch {
             try {
-                val response = RetrofitClient.api.updateItem(
-                    listId, item.id, ItemRequest(
-                        name = item.name,
-                        qty = item.qty,
-                        checked = item.checked,
-                        notes = item.notes,
-                        brand = item.brand,
-                        category = item.category,
-                        price = item.price,
-                        weight = item.weight
-                    )
-                )
+                val response = RetrofitClient.api.updateItem(listId, itemId, request)
                 // if successful response, load items
                 if(response.success) loadItems()
                 else _uiState.value = DetailUiState.Error(

@@ -36,6 +36,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.IconButton
+import androidx.compose.material3.Scaffold
 import com.example.shoppinglist.data.models.ShoppingList
 
 
@@ -45,57 +46,69 @@ fun ListsScreen(modifier: Modifier = Modifier, onListClick: (String) -> Unit = {
     val state by viewModel.uiState.collectAsState() // collectAsState is what lets us observe the state of the ViewModel
     var showDialog by remember { mutableStateOf(false) } // this is used to show the dialog
     var listToDelete by remember { mutableStateOf<ShoppingList?>(null) } // this is used to identify the list to delete
-    var listToRename by remember { mutableStateOf<ShoppingList?>(null)} // this is used to identify the list to rename
-    // wrap everything in a Box so a FAB can float over it
-    Box(modifier = modifier.fillMaxSize()) {
-        // when the state changes, the composable will be recomposed
-        when (val s = state) {
-            is ListsUiState.Loading -> {
-                // show loading indicator
-                Column(
-                    modifier = Modifier.fillMaxSize(),
-                    verticalArrangement = Arrangement.Center,
-                    horizontalAlignment = Alignment.CenterHorizontally
-                ) {
-                    CircularProgressIndicator()
-                }
+    var listToRename by remember { mutableStateOf<ShoppingList?>(null) } // this is used to identify the list to rename
+    // Wrap everything again in Scaffold to add another FAB
+    Scaffold(
+        modifier = modifier,
+        floatingActionButton = {
+            FloatingActionButton(onClick = { showDialog = true }) {
+                Icon(Icons.Default.Add, contentDescription = "New List")
             }
-
-            is ListsUiState.Error -> {
-                // show error message and a retry button that calls viewModel.loadLists()
-                Column(
-                    modifier = Modifier.fillMaxSize(),
-                    verticalArrangement = Arrangement.Center,
-                    horizontalAlignment = Alignment.CenterHorizontally
-                ) {
-                    Text(text = s.message)
-                    Button(onClick = { viewModel.loadLists() }) {
-                        Text(text = "Retry")
+        }
+    ) { innerPadding ->
+        // wrap everything in a Box so a FAB can float over it
+        Box(modifier = Modifier.padding(innerPadding).fillMaxSize()) {
+            // when the state changes, the composable will be recomposed
+            when (val s = state) {
+                is ListsUiState.Loading -> {
+                    // show loading indicator
+                    Column(
+                        modifier = Modifier.fillMaxSize(),
+                        verticalArrangement = Arrangement.Center,
+                        horizontalAlignment = Alignment.CenterHorizontally
+                    ) {
+                        CircularProgressIndicator()
                     }
                 }
-            }
 
-            is ListsUiState.Success -> {
-                // show list of lists
-                LazyColumn(
-                    modifier = Modifier
-                        .fillMaxSize()
-                        .padding(16.dp),
-                    verticalArrangement = Arrangement.spacedBy(8.dp)
-                ) {
-                    item {
-                        Text(
-                            text = "My Shopping Lists",
-                            style = MaterialTheme.typography.headlineMedium,
-                            modifier = Modifier.padding(bottom = 8.dp)
-                        )
+                is ListsUiState.Error -> {
+                    // show error message and a retry button that calls viewModel.loadLists()
+                    Column(
+                        modifier = Modifier.fillMaxSize(),
+                        verticalArrangement = Arrangement.Center,
+                        horizontalAlignment = Alignment.CenterHorizontally
+                    ) {
+                        Text(text = s.message)
+                        Button(onClick = { viewModel.loadLists() }) {
+                            Text(text = "Retry")
+                        }
                     }
-                    items(s.lists) { list ->
+                }
+
+                is ListsUiState.Success -> {
+                    // show list of lists
+                    LazyColumn(
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .padding(16.dp),
+                        verticalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
+                        item {
+                            Text(
+                                text = "My Shopping Lists",
+                                style = MaterialTheme.typography.headlineMedium,
+                                modifier = Modifier.padding(bottom = 8.dp)
+                            )
+                        }
+                        items(s.lists) { list ->
                             Card(
                                 modifier = Modifier.fillMaxWidth(),
                                 // make it clickable and pass the list id to the onListClick function
                                 onClick = { onListClick(list.id) }) {
-                                Row(modifier = Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+                                Row(
+                                    modifier = Modifier.fillMaxWidth(),
+                                    verticalAlignment = Alignment.CenterVertically
+                                ) {
                                     Text(
                                         text = list.name,
                                         style = MaterialTheme.typography.titleLarge,
@@ -103,10 +116,13 @@ fun ListsScreen(modifier: Modifier = Modifier, onListClick: (String) -> Unit = {
                                     )
                                     Spacer(modifier = Modifier.weight(1f))
                                     IconButton(onClick = { listToDelete = list }) {
-                                        Icon(Icons.Default.Delete, contentDescription = "Delete list")
+                                        Icon(
+                                            Icons.Default.Delete,
+                                            contentDescription = "Delete list"
+                                        )
                                     }
                                     Spacer(modifier = Modifier.weight(1f))
-                                    IconButton(onClick = {listToRename = list}) {
+                                    IconButton(onClick = { listToRename = list }) {
                                         Icon(Icons.Default.Edit, contentDescription = "Rename list")
                                     }
                                 }
@@ -115,79 +131,75 @@ fun ListsScreen(modifier: Modifier = Modifier, onListClick: (String) -> Unit = {
                     }
                 }
             }
-        // FAB that calls the showDialog variable
-        FloatingActionButton(
-            onClick = { showDialog = true },
-            modifier = Modifier.align(Alignment.BottomEnd).padding(16.dp)
-        ) { Icon(Icons.Default.Add, contentDescription = "New list") }
-        // show dialog here
-        if (showDialog) {
-            var name by remember { mutableStateOf("") }
-            AlertDialog(
-                onDismissRequest = { showDialog = false },
-                title = { Text("New Shopping list") },
-                text = {
-                    OutlinedTextField(
-                        value = name,
-                        onValueChange = { name = it },
-                        label = { Text("Name") })
-                },
-                confirmButton = {
-                    TextButton(
-                        enabled = name.isNotBlank(),
-                        onClick = {
-                            viewModel.createList(name.trim())
-                            showDialog = false
-                        }
-                    ) { Text("Create") }
-                },
-                dismissButton = {
-                    TextButton(onClick = { showDialog = false }) { Text("Cancel") }
-                }
-            )
-        }
-        // Deletion part of the card
-        listToDelete?.let { list ->
-            AlertDialog(
-                onDismissRequest = { listToDelete = null },
-                title = { Text("Delete '${list.name}'?") },
-                confirmButton = {
-                    TextButton(
-                        onClick = {
-                            viewModel.deleteList(list.id)
-                            listToDelete = null
-                        }
-                    ) { Text("Delete") }
-                },
-                dismissButton = {
-                    TextButton(onClick = { listToDelete = null }) { Text("Cancel") }
-                }
-            )
-        }
-        listToRename?.let { list ->
-            var name by remember(list) { mutableStateOf(list.name) } // name needs to be prefilled with the current list name
-            AlertDialog(
-                onDismissRequest = { listToRename = null },
-                title = { Text("Rename '${list.name}'?") },
-                text = {
-                    OutlinedTextField(
-                        value = name,
-                        onValueChange = { name = it },
-                        label = { Text("List Name") })
-                },
-                confirmButton = {
-                    TextButton(
-                        enabled = name.isNotBlank(),
-                        onClick = {
-                            viewModel.updateList(list.id, name.trim())
-                            listToRename = null
-                        },
-                    ) { Text("Rename") }
-                },
-                dismissButton = {
-                    TextButton(onClick = { listToRename = null }) { Text("Cancel") }
-                }
-            )
+            // show dialog here
+            if (showDialog) {
+                var name by remember { mutableStateOf("") }
+                AlertDialog(
+                    onDismissRequest = { showDialog = false },
+                    title = { Text("New Shopping list") },
+                    text = {
+                        OutlinedTextField(
+                            value = name,
+                            onValueChange = { name = it },
+                            label = { Text("Name") })
+                    },
+                    confirmButton = {
+                        TextButton(
+                            enabled = name.isNotBlank(),
+                            onClick = {
+                                viewModel.createList(name.trim())
+                                showDialog = false
+                            }
+                        ) { Text("Create") }
+                    },
+                    dismissButton = {
+                        TextButton(onClick = { showDialog = false }) { Text("Cancel") }
+                    }
+                )
+            }
+            // Deletion part of the card
+            listToDelete?.let { list ->
+                AlertDialog(
+                    onDismissRequest = { listToDelete = null },
+                    title = { Text("Delete '${list.name}'?") },
+                    confirmButton = {
+                        TextButton(
+                            onClick = {
+                                viewModel.deleteList(list.id)
+                                listToDelete = null
+                            }
+                        ) { Text("Delete") }
+                    },
+                    dismissButton = {
+                        TextButton(onClick = { listToDelete = null }) { Text("Cancel") }
+                    }
+                )
+            }
+            listToRename?.let { list ->
+                var name by remember(list) { mutableStateOf(list.name) } // name needs to be prefilled with the current list name
+                AlertDialog(
+                    onDismissRequest = { listToRename = null },
+                    title = { Text("Rename '${list.name}'?") },
+                    text = {
+                        OutlinedTextField(
+                            value = name,
+                            onValueChange = { name = it },
+                            label = { Text("List Name") })
+                    },
+                    confirmButton = {
+                        TextButton(
+                            enabled = name.isNotBlank(),
+                            onClick = {
+                                viewModel.updateList(list.id, name.trim())
+                                listToRename = null
+                            },
+                        ) { Text("Rename") }
+                    },
+                    dismissButton = {
+                        TextButton(onClick = { listToRename = null }) { Text("Cancel") }
+                    }
+                )
+            }
         }
     }
 }
