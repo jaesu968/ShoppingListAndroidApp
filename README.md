@@ -75,14 +75,32 @@ init { loadLists() }   // ≈ fetch in onMounted
 
 In the composable: `val state by viewModel.uiState.collectAsState()` — any new value recomposes the screen automatically.
 
-### 3. Route params without a factory
+### 3. Route params via a ViewModel factory
 
-Navigation Compose puts route arguments into `SavedStateHandle` for free:
+Navigation Compose populates a `SavedStateHandle` with the route arguments — but the
+detail ViewModel also takes an `ApiService`, so the default `viewModel()` provider can't
+build it by reflection. A small factory bridges the two: `createSavedStateHandle()` pulls
+the nav-arg-backed handle out of `CreationExtras`, and the `api` keeps its default.
 
 ```kotlin
-class ListDetailViewModel(savedStateHandle: SavedStateHandle) : ViewModel() {
+class ListDetailViewModel(
+    savedStateHandle: SavedStateHandle,
+    private val api: ApiService = RetrofitClient.api,
+) : ViewModel() {
     private val listId: String = checkNotNull(savedStateHandle["listId"])
+
+    companion object {
+        val Factory = viewModelFactory {
+            initializer { ListDetailViewModel(savedStateHandle = createSavedStateHandle()) }
+        }
+    }
 }
+```
+
+The `detail/{listId}` route then builds it entry-scoped, so the handle carries `listId`:
+
+```kotlin
+ListDetailScreen(viewModel = viewModel(factory = ListDetailViewModel.Factory), onBack = ...)
 ```
 
 ### 4. State is replaced but never mutated
@@ -138,6 +156,41 @@ the dialog for a different item, instead of showing stale text.
 - **Confirm-before-delete means rerouting the trigger:** the destructive call moves *into*
   the dialog's 'confirm' button; the icon only nominates the target.
 
+## Testing
+
+32 tests across two source sets, split by what they need to run:
+
+**Unit tests** (`app/src/test`, JVM — no device) cover the ViewModel logic. Both
+ViewModels are tested against a hand-written `FakeApiService` that returns canned
+`ApiResponse`s (and can be told to throw), so every branch — success, API-reported
+failure, and thrown exception — is exercised without a network:
+
+- `ListsViewModelTest` (9) — load / create / rename / delete, incl. that a failed
+  mutation surfaces `Error` and does **not** reload.
+- `ListDetailViewModelTest` (12) — load / add / toggle / edit / delete items, incl.
+  empty-list and immutable-replacement paths.
+
+A `MainDispatcherRule` swaps in a test dispatcher so `viewModelScope` coroutines run
+synchronously, and mutable fields on the fake (e.g. `getListCallCount`) let tests assert
+that a successful create actually triggers a reload.
+
+**Instrumented tests** (`app/src/androidTest`, Compose UI — needs an emulator/device)
+render composables in isolation:
+
+- `ListDetailScreenTest` (6) — drives a stateless `DetailContent` with hand-built
+  `DetailUiState`s and asserts each renders (Loading / Error / Success) and that
+  checkbox, delete, and retry fire the right callbacks. (The `when(state)` block was
+  extracted out of `ListDetailScreen` specifically so it could be tested without a VM.)
+- `ItemFormDialogTest` (5) — Save enable/disable, quantity fallback, blank→null
+  optionals, and edit-mode prefill.
+
+**Libraries:** JUnit4, `kotlinx-coroutines-test`, and `androidx.compose.ui.test` (JUnit4).
+
+```bash
+./gradlew testDebugUnitTest            # unit tests (fast, no device)
+./gradlew connectedDebugAndroidTest    # UI tests (emulator/device must be running)
+```
+
 ## API
 
 The app talks to the shopping-list backend at `/api`:
@@ -192,6 +245,7 @@ workflow: `./run-backend.sh` in Android Studio's terminal tab, then Run the app.
 - [x] List detail screen: items, checkbox toggle
 - [x] Create / rename / delete lists (delete with confirmation)
 - [x] Add / edit / delete items via the shared form dialog
+- [x] Test suite: 32 unit + instrumented tests (ViewModels, Compose UI, dialog)
 
 **Full feature parity with the Vue web app.** Possible future work: snackbar-with-undo
 for deletes, pull-to-refresh, favorites, offline caching with Room.

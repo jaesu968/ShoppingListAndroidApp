@@ -2,7 +2,10 @@ package com.example.shoppinglist.lists
 
 import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
+import androidx.lifecycle.createSavedStateHandle
 import androidx.lifecycle.viewModelScope
+import androidx.lifecycle.viewmodel.initializer
+import androidx.lifecycle.viewmodel.viewModelFactory
 import com.example.shoppinglist.data.api.RetrofitClient
 import com.example.shoppinglist.data.models.Item
 import com.example.shoppinglist.data.models.ItemRequest
@@ -28,6 +31,17 @@ class ListDetailViewModel(savedStateHandle: SavedStateHandle,
     // init block to load data
     init {
         loadItems()
+    }
+
+    companion object {
+        // factory that lets Navigation supply the nav-arg-populated SavedStateHandle
+        // (createSavedStateHandle() reads it from CreationExtras) while we keep the
+        // default api = RetrofitClient.api
+        val Factory = viewModelFactory {
+            initializer {
+                ListDetailViewModel(savedStateHandle = createSavedStateHandle())
+            }
+        }
     }
 
     // function to load items
@@ -74,6 +88,10 @@ class ListDetailViewModel(savedStateHandle: SavedStateHandle,
                             }
                         )
                     }
+                } else {
+                    _uiState.value = DetailUiState.Error(
+                        response.error ?: response.message ?: "Failed to update item"
+                    )
                 }
             } catch (e: Exception) {
                 // item stays unchecked on failure

@@ -43,6 +43,7 @@ import androidx.compose.material3.Scaffold
 import androidx.compose.material3.TopAppBar
 import com.example.shoppinglist.data.models.Item
 import androidx.compose.material3.ButtonDefaults
+import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.style.TextDecoration
 
 
@@ -75,71 +76,14 @@ fun ListDetailScreen(modifier: Modifier = Modifier, viewModel: ListDetailViewMod
         // wrap everything in a Box so a FAB can float over it
         Box(modifier = modifier.padding(innerPadding).fillMaxSize()) {
             // when the state changes, the composable will recompose
-            when (val s = state) {
-                is DetailUiState.Loading -> {
-                    // show loading indicator
-                    Column(
-                        modifier = Modifier.fillMaxSize(),
-                        verticalArrangement = Arrangement.Center,
-                        horizontalAlignment = Alignment.CenterHorizontally
-                    ) {
-                        CircularProgressIndicator()
-                    }
-                }
-
-                is DetailUiState.Error -> {
-                    // show error message and a retry button that calls viewModel.loadLists()
-                    Column(
-                        modifier = Modifier.fillMaxSize(),
-                        verticalArrangement = Arrangement.Center,
-                        horizontalAlignment = Alignment.CenterHorizontally
-                    ) {
-                        Text(text = s.message)
-                        Button(onClick = { viewModel.loadItems() }) {
-                            Text(text = "Retry")
-                        }
-                    }
-                }
-
-                is DetailUiState.Success -> {
-                    LazyColumn(
-                        modifier = Modifier.fillMaxSize(),
-                        verticalArrangement = Arrangement.spacedBy(16.dp),
-                        contentPadding = PaddingValues(16.dp)
-                    ) {
-                        items(s.items) { item ->
-                            Card(
-                                modifier = Modifier.fillMaxWidth(),
-                                border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant),
-                                onClick = { itemToEdit = item }) {
-                                Row(
-                                    modifier = Modifier.fillMaxWidth().padding(8.dp),
-                                    verticalAlignment = Alignment.CenterVertically
-                                ) {
-                                    Checkbox(
-                                        checked = item.checked,
-                                        onCheckedChange = { viewModel.toggleItem(item) }
-                                    )
-                                    Text(
-                                        text = if (item.qty > 1) "${item.name} x ${item.qty}" else item.name,
-                                        style = MaterialTheme.typography.bodyLarge,
-                                        // strike through the text if the item is checked
-                                        textDecoration = if (item.checked) TextDecoration.LineThrough else null,
-                                        // color the text based on the checked state
-                                        color = if (item.checked) MaterialTheme.colorScheme.onSurfaceVariant
-                                                else MaterialTheme.colorScheme.onSurface
-                                    )
-                                    Spacer(modifier = Modifier.weight(1f))
-                                    IconButton(onClick = { itemToDelete = item }) {
-                                        Icon(Icons.Default.Delete, contentDescription = "Delete",
-                                            tint = MaterialTheme.colorScheme.error)
-                                    }
-                                }
-                            }
-                        }
-                    }
-                }
-            }
+            DetailContent(
+                modifier = Modifier,
+                state = state,
+                onToggle = viewModel::toggleItem,
+                onEdit = { itemToEdit = it },
+                onDeleteRequest = { itemToDelete = it },
+                onRetry = viewModel::loadItems,
+            )
             // FAB that calls the showDialog variable
             FloatingActionButton(
                 onClick = { showDialog = true },
@@ -194,6 +138,84 @@ fun ListDetailScreen(modifier: Modifier = Modifier, viewModel: ListDetailViewMod
                         itemToEdit = null
                     }
                 )
+            }
+        }
+    }
+}
+
+// move when expression outside the ListDetailScreen into a separate composable
+@Composable
+fun DetailContent(
+    modifier: Modifier = Modifier,
+    state: DetailUiState,
+    onToggle: (Item) -> Unit = {},
+    onEdit: (Item) -> Unit = {},
+    onDeleteRequest: (Item) -> Unit = {},
+    onRetry: () -> Unit = {},
+
+) {
+    when (val s = state) {
+        is DetailUiState.Loading -> {
+            // show loading indicator
+            Column(
+                modifier = Modifier.fillMaxSize(),
+                verticalArrangement = Arrangement.Center,
+                horizontalAlignment = Alignment.CenterHorizontally
+            ) {
+                CircularProgressIndicator(modifier = Modifier.testTag("loadingIndicator"))
+            }
+        }
+
+        is DetailUiState.Error -> {
+            // show error message and a retry button that calls viewModel.loadLists()
+            Column(
+                modifier = Modifier.fillMaxSize(),
+                verticalArrangement = Arrangement.Center,
+                horizontalAlignment = Alignment.CenterHorizontally
+            ) {
+                Text(text = s.message)
+                Button(onClick = onRetry)  {
+                    Text(text = "Retry")
+                }
+            }
+        }
+
+        is DetailUiState.Success -> {
+            LazyColumn(
+                modifier = Modifier.fillMaxSize(),
+                verticalArrangement = Arrangement.spacedBy(16.dp),
+                contentPadding = PaddingValues(16.dp)
+            ) {
+                items(s.items) { item ->
+                    Card(
+                        modifier = Modifier.fillMaxWidth(),
+                        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant),
+                        onClick = { onEdit(item) }) {
+                        Row(
+                            modifier = Modifier.fillMaxWidth().padding(8.dp),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Checkbox(
+                                checked = item.checked,
+                                onCheckedChange = { onToggle(item) }
+                            )
+                            Text(
+                                text = if (item.qty > 1) "${item.name} x ${item.qty}" else item.name,
+                                style = MaterialTheme.typography.bodyLarge,
+                                // strike through the text if the item is checked
+                                textDecoration = if (item.checked) TextDecoration.LineThrough else null,
+                                // color the text based on the checked state
+                                color = if (item.checked) MaterialTheme.colorScheme.onSurfaceVariant
+                                else MaterialTheme.colorScheme.onSurface
+                            )
+                            Spacer(modifier = Modifier.weight(1f))
+                            IconButton(onClick = { onDeleteRequest(item) }) {
+                                Icon(Icons.Default.Delete, contentDescription = "Delete",
+                                    tint = MaterialTheme.colorScheme.error)
+                            }
+                        }
+                    }
+                }
             }
         }
     }

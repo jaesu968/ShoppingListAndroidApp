@@ -13,7 +13,7 @@
         </DropdownSelection>
         <DialogSelection />
       </SelectionState>
-      <SelectionState runConfigName="ItemFormDialogTest">
+      <SelectionState runConfigName="ListDetailScreenTest">
         <option name="selectionMode" value="DROPDOWN" />
         <DropdownSelection timestamp="2026-07-14T13:53:34.143039Z">
           <Target type="DEFAULT_BOOT">
