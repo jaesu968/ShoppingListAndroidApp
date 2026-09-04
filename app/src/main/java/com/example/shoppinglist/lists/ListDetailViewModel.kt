@@ -1,5 +1,6 @@
 package com.example.shoppinglist.lists
 
+import android.app.Application
 import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.createSavedStateHandle
@@ -15,10 +16,15 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
+import com.example.shoppinglist.data.ShoppingListRepository
+import com.example.shoppinglist.data.local.DatabaseBuilder
+import androidx.lifecycle.ViewModelProvider.AndroidViewModelFactory.Companion.APPLICATION_KEY
+
 
 // view model for list details
 class ListDetailViewModel(savedStateHandle: SavedStateHandle,
-    private val api: ApiService = RetrofitClient.api
+                          private val repository: ShoppingListRepository,
+                          private val api: ApiService = RetrofitClient.api
 ): ViewModel() {
     // get list id from saved state handle
     private val listId: String = checkNotNull(savedStateHandle["listId"])
@@ -30,7 +36,8 @@ class ListDetailViewModel(savedStateHandle: SavedStateHandle,
 
     // init block to load data
     init {
-        loadItems()
+        observeItems()
+        refresh()
     }
 
     companion object {
@@ -39,33 +46,39 @@ class ListDetailViewModel(savedStateHandle: SavedStateHandle,
         // default api = RetrofitClient.api
         val Factory = viewModelFactory {
             initializer {
-                ListDetailViewModel(savedStateHandle = createSavedStateHandle())
+                val app = this[APPLICATION_KEY] as Application
+                val db = DatabaseBuilder.getDatabase(app)
+                val repository = ShoppingListRepository(
+                    api = RetrofitClient.api,
+                    listDao = db.listDao(),
+                    itemDao = db.itemDao()
+                )
+                ListDetailViewModel(
+                    this.createSavedStateHandle(),
+                    repository = repository
+                )
             }
         }
     }
 
-    // function to load items
-    fun loadItems() {
+    // observe items for this list from Room (offline source of truth)
+    private fun observeItems(){
         viewModelScope.launch {
-            _uiState.value = DetailUiState.Loading
-            // try catch block to handle errors
+            repository.observeItems(listId).collect { items ->
+                // items Flow carries no list name, so preserve the one we already have
+                // "get this field only is the state is the right shape"
+                val currentName = (_uiState.value as? DetailUiState.Success)?.listName ?: ""
+                _uiState.value = DetailUiState.Success(currentName, items)
+            }
+        }
+    }
+
+    fun refresh() {
+        viewModelScope.launch {
             try {
-                // fetch lists from database
-                val response = api.getList(listId)
-                if (response.success && response.data != null) {
-                    // check if response is successful and data is not null
-                    val list = response.data // get list data
-                    _uiState.value = DetailUiState.Success(
-                        list.name,
-                        list.items ?: emptyList()
-                    ) // set success state with data
-                } else {
-                    _uiState.value = DetailUiState.Error(
-                        response.error ?: response.message ?: "Unknown error"
-                    ) // set error state with message
-                }
-            } catch (e: Exception) {
-                _uiState.value = DetailUiState.Error(e.message ?: "Network error")
+                repository.refreshItems(listId)
+            } catch (e: Exception){
+                // offline - Room still has cached items, don't blow away the screen
             }
         }
     }
@@ -78,19 +91,11 @@ class ListDetailViewModel(savedStateHandle: SavedStateHandle,
                     listId, item.id, ItemRequest(checked = !item.checked)
                 )
                 // check for successful response
-                if (response.success && response.data != null) {
-                    val current = _uiState.value
-                    if (current is DetailUiState.Success) {
-                        _uiState.value = current.copy(
-                            // state must be replaced not mutated to preserve immutability
-                            items = current.items.map {
-                                if (it.id == item.id) response.data else it // update item in list
-                            }
-                        )
-                    }
-                } else {
+                if(response.success && response.data != null) refresh() // call refresh to updated item
+                else {
+                    // if not successful set error state
                     _uiState.value = DetailUiState.Error(
-                        response.error ?: response.message ?: "Failed to update item"
+                    response.error ?: response.message ?: "Failed to update item"
                     )
                 }
             } catch (e: Exception) {
@@ -108,7 +113,7 @@ class ListDetailViewModel(savedStateHandle: SavedStateHandle,
                 val response =
                     api.createItem(listId, request)
                 // if successful response, load the item
-                if (response.success && response.data != null) loadItems()
+                if (response.success && response.data != null) refresh() // call refresh to see new item
                 // if not successful, set error state
                 else _uiState.value = DetailUiState.Error(
                     response.error ?: response.message ?: "Failed to create item"
@@ -126,15 +131,8 @@ class ListDetailViewModel(savedStateHandle: SavedStateHandle,
             try {
                 val response = api.deleteItem(listId, item.id)
                 // if successful response, remove item from list
-                if (response.success) {
-                    val current = _uiState.value
-                    if (current is DetailUiState.Success) {
-                        _uiState.value = current.copy(
-                            // filter out the item, effectively removing it
-                            items = current.items.filter { it.id != item.id }
-                        )
-                    }
-                } else {
+                if (response.success) refresh() // call refresh to see item removed
+                else {
                     // if not successful, set error state
                     _uiState.value = DetailUiState.Error(
                         response.error ?: response.message ?: "Failed to delete item"
@@ -153,7 +151,7 @@ class ListDetailViewModel(savedStateHandle: SavedStateHandle,
             try {
                 val response = api.updateItem(listId, itemId, request)
                 // if successful response, load items
-                if(response.success) loadItems()
+                if(response.success) refresh() // call refresh to see the updated item
                 else _uiState.value = DetailUiState.Error(
                     response.error ?: response.message ?: "Failed to update item"
                 )

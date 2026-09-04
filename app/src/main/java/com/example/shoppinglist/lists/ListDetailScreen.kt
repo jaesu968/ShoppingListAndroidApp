@@ -82,7 +82,7 @@ fun ListDetailScreen(modifier: Modifier = Modifier, viewModel: ListDetailViewMod
                 onToggle = viewModel::toggleItem,
                 onEdit = { itemToEdit = it },
                 onDeleteRequest = { itemToDelete = it },
-                onRetry = viewModel::loadItems,
+                onRetry = viewModel::refresh,
             )
             // FAB that calls the showDialog variable
             FloatingActionButton(

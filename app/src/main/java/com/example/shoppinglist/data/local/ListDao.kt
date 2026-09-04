@@ -4,13 +4,12 @@ package com.example.shoppinglist.data.local
 import androidx.room.Dao // import to use DAO
 import androidx.room.Query // import to make queries
 import androidx.room.Upsert // import to upsert lists
-import com.example.shoppinglist.data.models.ShoppingList
 import kotlinx.coroutines.flow.Flow // import flow from kotlinx.coroutines to allow asynchronous data retrieval
 
 @Dao // annotation to tell Room this is a DAO
 interface ListDao {
     @Query("SELECT * FROM shopping_lists") // get all lists
-    fun observeAll(): Flow<List<ShoppingList>>
+    fun observeAll(): Flow<List<ListEntity>>
 
     @Upsert
     suspend fun upsertAll(lists: List<ListEntity>) // update or insert a list
