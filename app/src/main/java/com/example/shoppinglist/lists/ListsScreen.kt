@@ -54,7 +54,8 @@ fun ListsScreen(
     onListClick: (String) -> Unit = {},
     darkTheme: Boolean = false,
     onToggleTheme: () -> Unit = {},
-    viewModel: ListsViewModel = viewModel()) {
+    viewModel: ListsViewModel = viewModel(factory = ListsViewModel.Factory)
+    ) {
     val state by viewModel.uiState.collectAsState() // collectAsState is what lets us observe the state of the ViewModel
     var showDialog by remember { mutableStateOf(false) } // this is used to show the dialog
     var listToDelete by remember { mutableStateOf<ShoppingList?>(null) } // this is used to identify the list to delete
@@ -107,7 +108,7 @@ fun ListsScreen(
                         horizontalAlignment = Alignment.CenterHorizontally
                     ) {
                         Text(text = s.message)
-                        Button(onClick = { viewModel.loadLists() }) {
+                        Button(onClick = { viewModel.refresh() }) {
                             Text(text = "Retry")
                         }
                     }

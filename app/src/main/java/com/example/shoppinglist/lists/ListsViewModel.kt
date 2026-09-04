@@ -10,37 +10,65 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
+import com.example.shoppinglist.data.ShoppingListRepository
+import android.app.Application
+import androidx.lifecycle.viewmodel.initializer
+import androidx.lifecycle.viewmodel.viewModelFactory
+import androidx.lifecycle.ViewModelProvider.AndroidViewModelFactory.Companion.APPLICATION_KEY
+import com.example.shoppinglist.data.local.DatabaseBuilder
+
 
 // ViewModel for holding state and do the fetching of data
-class ListsViewModel(private val api: ApiService = RetrofitClient.api) : ViewModel() {
+class ListsViewModel(private val repository: ShoppingListRepository, private val api: ApiService = RetrofitClient.api) : ViewModel() {
     // StateFlow for holding the UI state
     private val _uiState = MutableStateFlow<ListsUiState>(ListsUiState.Loading)
-    val uiState: StateFlow<ListsUiState> = _uiState.asStateFlow()
+    val uiState: StateFlow<ListsUiState> = _uiState.asStateFlow() // expose the state as a StateFlow
 
-    // init block to fetch the data
-    init { loadLists() } // load the data upon startup of app
-
-    // function to load lists from the database
-    fun loadLists() {
-        // launch a coroutine for asynchronous fetching of data from the database
-        // launch is what lets us call the suspend functions in ApiService and get the response
-        // all without blocking the UI thread and auto-cancels if the ViewModel is destroyed
-        // it is the structured equivalent of async in onMounted in Vue
-        viewModelScope.launch {
-            _uiState.value = ListsUiState.Loading // set loading state
-            try {
-                // fetch lists from database
-                val response = api.getAllLists()
-                if (response.success && response.data != null) {
-                    _uiState.value = ListsUiState.Success(response.data) // set success state with data
-                } else {
-                    _uiState.value = ListsUiState.Error(response.error ?: response.message ?: "Unknown error") // set error state with message
-                }
-            } catch (e: Exception){
-                _uiState.value = ListsUiState.Error(e.message ?: "Network error") // set error state with message
+    // companion object to build factory for creating the ViewModel
+    companion object {
+        val Factory = viewModelFactory {
+            initializer {
+                // the framework hands us the Application via CreationExtras
+                val app = this[APPLICATION_KEY] as Application
+                val db = DatabaseBuilder.getDatabase(app)
+                val repository = ShoppingListRepository(
+                    api = RetrofitClient.api,
+                    // accessors for the DAOs from the database
+                    listDao = db.listDao(),
+                    itemDao = db.itemDao()
+                )
+                ListsViewModel(
+                    repository = repository
+                )
             }
         }
     }
+
+    init{
+        observeLists() // start the Room subscription
+        refresh() // kick oof a network sync
+    }
+    // observe lists from Room
+    private fun observeLists(){
+        viewModelScope.launch {
+            repository.observeLists().collect{
+                lists -> // collect the lists from the repository
+                _uiState.value = ListsUiState.Success(lists)
+            }
+        }
+    }
+
+    fun refresh() {
+        viewModelScope.launch {
+            try {
+                repository.refreshLists()
+            } catch (e:Exception){
+                // network failed - but Room still has cached data, so DON'T blow away the screen
+                // (for now, just leave it)
+            }
+        }
+    }
+
 
     // Create a List function '
     fun createList(name: String){
@@ -49,7 +77,7 @@ class ListsViewModel(private val api: ApiService = RetrofitClient.api) : ViewMod
             try {
                 val response = api.createList(ListRequest(name))
                 // if successful response, load the lists
-                if (response.success) loadLists()
+                if (response.success) refresh()
                 // if not successful, set the error state
                 else _uiState.value = ListsUiState.Error(response.error ?: "Failed to create list")
             } catch (e: Exception){
@@ -66,7 +94,7 @@ class ListsViewModel(private val api: ApiService = RetrofitClient.api) : ViewMod
             try {
                 val response = api.deleteList(id)
                 // if successful response, load the lists
-                if (response.success) loadLists()
+                if (response.success) refresh()
                 // if not successful, set the error state
                 else _uiState.value = ListsUiState.Error(response.error ?: "Failed to delete list")
             } catch (e: Exception){
@@ -83,7 +111,7 @@ class ListsViewModel(private val api: ApiService = RetrofitClient.api) : ViewMod
             try {
                 val response = api.updateList(id, ListRequest(name))
                 // if successful response, load the lists
-                if (response.success) loadLists()
+                if (response.success) refresh()
                 // if not successful, set the error state
                 else _uiState.value = ListsUiState.Error(response.error ?: "Failed to update list")
             } catch (e: Exception){
