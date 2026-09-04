@@ -4,11 +4,12 @@ A native Android port of my Vue shopping-list web app, built with **Kotlin** and
 
 ## Tech stack
 
-- **Language:** Kotlin (coroutines for all async work)
+- **Language:** Kotlin (coroutines + `Flow` for all async work)
 - **UI:** Jetpack Compose (Material 3), Navigation Compose
 - **State:** ViewModel + `StateFlow` with explicit Loading / Success / Error UI states
 - **Networking:** Retrofit + OkHttp (logging interceptor) + kotlinx-serialization
-- **Build:** Gradle with version catalog (`gradle/libs.versions.toml`)
+- **Offline cache:** Room (entities, DAOs, reactive `Flow` queries) as the on-device source of truth
+- **Build:** Gradle with version catalog (`gradle/libs.versions.toml`), KSP for Room codegen
 
 ## Project structure
 
@@ -19,12 +20,21 @@ app/src/main/java/com/example/shoppinglist/
 │   ├── api/
 │   │   ├── ApiService.kt        # Retrofit interface (all 9 endpoints)
 │   │   └── RetrofitClient.kt    # Retrofit/OkHttp singleton, base URL
+│   ├── local/                   # Room: the offline cache
+│   │   ├── ListEntity.kt        # @Entity for the shopping_lists table
+│   │   ├── ItemEntity.kt        # @Entity for the items table
+│   │   ├── ListDao.kt           # @Dao: observeAll() Flow, upsert, clear
+│   │   ├── ItemDao.kt           # @Dao: observeItemsForList() Flow, upsert, clear
+│   │   ├── AppDatabase.kt       # @Database tying entities + DAOs together
+│   │   ├── DatabaseBuilder.kt   # thread-safe singleton (Room.databaseBuilder)
+│   │   └── Mappers.kt           # entity <-> model conversions (toEntity / toModel)
+│   ├── ShoppingListRepository.kt # observe (Room) + refresh (network -> Room)
 │   └── models/Models.kt         # @Serializable data classes + request bodies
 ├── lists/
 │   ├── ListsScreen.kt           # Home: all lists + create/rename/delete dialogs
-│   ├── ListsViewModel.kt        # load / create / rename / delete lists
+│   ├── ListsViewModel.kt        # observe/refresh lists + create / rename / delete
 │   ├── ListDetailScreen.kt      # One list: items, checkboxes, TopAppBar w/ back
-│   ├── ListDetailViewModel.kt   # load / add / toggle / edit / delete items
+│   ├── ListDetailViewModel.kt   # observe/refresh items + add / toggle / edit / delete
 │   └── ItemFormDialog.kt        # Shared form for add AND edit (≈ ItemForm.vue)
 └── ui/
     ├── ListsUiState.kt          # Sealed Loading / Success / Error state
@@ -42,8 +52,9 @@ The port is a frontend rewrite; every Vue concept has a Compose equivalent:
 | Route + `vue-router` | Screen composable + `NavHost` route |
 | `$route.params.id` | Nav argument via `SavedStateHandle["listId"]` |
 | `axios` service module (`api.js`) | Retrofit interface (`ApiService.kt`) |
+| — (no offline layer on web) | Room cache + `ShoppingListRepository` (source of truth) |
 | `ref()` reactive state | `StateFlow` (ViewModel) / `remember { mutableStateOf() }` (local) |
-| Fetch in `onMounted` | `viewModelScope.launch` in ViewModel `init` |
+| Fetch in `onMounted` | Observe Room `Flow` + kick off a network `refresh()` in ViewModel `init` |
 | `v-for` | `LazyColumn` + `items()` |
 | `v-if` for a modal | `if (showDialog) { AlertDialog(...) }` |
 | Shared `ItemForm.vue` for create/edit | Shared `ItemFormDialog` with nullable `initial: Item?` |
@@ -64,57 +75,107 @@ sealed interface ListsUiState {
 
 The screen just uses `when` expressions to render the state over it; the compiler forces all three branches to exist.
 
-### 2. ViewModel owns the data, and the screen observes it
+### 2. Offline-first: Room is the source of truth, the network only refreshes it
+
+The ViewModel no longer *owns* the list data — it **observes** Room and, separately,
+**refreshes** Room from the network. Reads never fail (they come from the cache); a
+failed refresh leaves the cached screen intact instead of showing an error.
 
 ```kotlin
 private val _uiState = MutableStateFlow<ListsUiState>(ListsUiState.Loading)
 val uiState: StateFlow<ListsUiState> = _uiState.asStateFlow()
 
-init { loadLists() }   // ≈ fetch in onMounted
+init {
+    observeLists()   // subscribe to the Room Flow (works offline, never fails)
+    refresh()        // pull from the network INTO Room (may fail; swallowed)
+}
+
+private fun observeLists() = viewModelScope.launch {
+    repository.observeLists().collect { lists ->
+        _uiState.value = ListsUiState.Success(lists)   // Room emits -> UI updates
+    }
+}
 ```
+
+The repository keeps the two paths cleanly separated:
+
+```kotlin
+// read: Room only, reactive, offline-safe
+fun observeLists(): Flow<List<ShoppingList>> =
+    listDao.observeAll().map { entities -> entities.map { it.toModel() } }
+
+// write: hit the network, then upsert into Room (which re-emits to observers)
+suspend fun refreshLists() {
+    val response = api.getAllLists()
+    if (response.success && response.data != null)
+        listDao.upsertAll(response.data.map { it.toEntity() })
+}
+```
+
+Because writes flow *through* Room, every mutation (create/rename/delete) just calls the
+API and then `refresh()` — the observe loop updates the UI; the ViewModel never edits
+`_uiState` by hand for successful writes.
 
 In the composable: `val state by viewModel.uiState.collectAsState()` — any new value recomposes the screen automatically.
 
 ### 3. Route params via a ViewModel factory
 
-Navigation Compose populates a `SavedStateHandle` with the route arguments — but the
-detail ViewModel also takes an `ApiService`, so the default `viewModel()` provider can't
-build it by reflection. A small factory bridges the two: `createSavedStateHandle()` pulls
-the nav-arg-backed handle out of `CreationExtras`, and the `api` keeps its default.
+Both ViewModels take a `ShoppingListRepository`, which needs the Room DAOs, which need a
+`Context`. The default `viewModel()` provider can't supply that, so each ViewModel exposes
+a `viewModelFactory`. It reads the `Application` (a `Context`) from `CreationExtras` via
+`APPLICATION_KEY`, builds the database + repository, and — for the detail screen — also
+pulls the nav-arg-backed `SavedStateHandle` out with `createSavedStateHandle()`.
 
 ```kotlin
-class ListDetailViewModel(
-    savedStateHandle: SavedStateHandle,
-    private val api: ApiService = RetrofitClient.api,
-) : ViewModel() {
-    private val listId: String = checkNotNull(savedStateHandle["listId"])
-
-    companion object {
-        val Factory = viewModelFactory {
-            initializer { ListDetailViewModel(savedStateHandle = createSavedStateHandle()) }
+companion object {
+    val Factory = viewModelFactory {
+        initializer {
+            val app = this[APPLICATION_KEY] as Application
+            val db = DatabaseBuilder.getDatabase(app)
+            val repository = ShoppingListRepository(
+                api = RetrofitClient.api,
+                listDao = db.listDao(),
+                itemDao = db.itemDao(),
+            )
+            ListDetailViewModel(
+                savedStateHandle = createSavedStateHandle(),   // carries listId
+                repository = repository,
+            )
         }
     }
 }
 ```
 
-The `detail/{listId}` route then builds it entry-scoped, so the handle carries `listId`:
+Both screens build their ViewModel through the factory:
 
 ```kotlin
+// lists
+viewModel: ListsViewModel = viewModel(factory = ListsViewModel.Factory)
+// detail (entry-scoped, so the handle carries listId)
 ListDetailScreen(viewModel = viewModel(factory = ListDetailViewModel.Factory), onBack = ...)
 ```
 
-### 4. State is replaced but never mutated
+`DatabaseBuilder.getDatabase()` is a double-checked singleton, so both factories share one
+database instance for the app's lifetime.
 
-Compose only recomposes when the `StateFlow` gets a *new* value. So updates
-build new lists instead of editing in place:
+### 4. Mutations reconcile through Room, not by editing UI state
+
+Compose only recomposes when the `StateFlow` gets a *new* value. With Room as the source
+of truth, a successful mutation doesn't hand-edit `_uiState` — it just re-`refresh()`es,
+and the Room `Flow` emits a fresh list that replaces the state:
 
 ```kotlin
-// toggle: swap one item for the server's updated copy
-items = current.items.map { if (it.id == item.id) response.data else it }
-
-// delete: filter it out
-items = current.items.filter { it.id != item.id }
+fun deleteItem(item: Item) = viewModelScope.launch {
+    val response = api.deleteItem(listId, item.id)
+    if (response.success) refresh()          // network -> Room -> observe loop -> UI
+    else _uiState.value = DetailUiState.Error(...)
+}
 ```
+
+**Tradeoff:** this drops the earlier *optimistic* updates (instantly swapping/filtering the
+item before the server replies) in exchange for a single, consistent code path. Toggles and
+deletes now wait for the round-trip; optimistic-update-with-rollback is possible future work
+if snappier feedback is wanted.
 
 ### 5. Dialog state patterns
 
@@ -246,6 +307,9 @@ workflow: `./run-backend.sh` in Android Studio's terminal tab, then Run the app.
 - [x] Create / rename / delete lists (delete with confirmation)
 - [x] Add / edit / delete items via the shared form dialog
 - [x] Test suite: 32 unit + instrumented tests (ViewModels, Compose UI, dialog)
+- [x] Offline caching with Room: reads served from an on-device cache, background refresh
 
-**Full feature parity with the Vue web app.** Possible future work: snackbar-with-undo
-for deletes, pull-to-refresh, favorites, offline caching with Room.
+**Full feature parity with the Vue web app, plus offline reads the web app doesn't have.**
+Possible future work: snackbar-with-undo for deletes, pull-to-refresh, favorites,
+optimistic mutations with rollback, and caching the list *name* on the detail screen
+(currently only items are cached; the name falls back to empty until a refresh lands).
